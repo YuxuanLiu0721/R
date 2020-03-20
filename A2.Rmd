@@ -1,0 +1,155 @@
+---
+title: "A2"
+output: html_document
+---
+
+```{r include=FALSE}
+library(fivethirtyeight) 
+data(biopics)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+```
+Q1
+
+#(a) Using the plot of your choice, assess whether the total number of biopics released per year has increased over time based on the data collected from the IMDB movie database.
+
+```{r warning=FALSE}
+biopics_by_year <- biopics %>% group_by(year_release) %>% summarise(count=n())
+ggplot(biopics_by_year,aes(x=year_release,y=count))+
+  geom_line() + labs(x="year",y="Number of biopics")+geom_smooth()
+```
+
+#According to the line plot we draw, the total number of biopics released per year has increased over time.
+
+
+#(b) Produce a stacked barplot similar to the barplot in the original article showing the relative numbers of male and female subjects over time (Note the figures will not exactly be the same as the data in the article figures is not the same as in the dataset).
+
+```{r}
+ggplot(biopics,aes(x=year_release,fill=subject_sex))+
+  geom_bar()+
+  ylab("Total number of biopics")
+```
+
+
+#(c) Produce a stacked barplot similar to the barplot in the original article showing the relative numbers of white subjects, subjects who are persons of color, and unknown race subjects over time. (Mote the figures will not exactly be the same as the data in the article figures is not the same as in the dataset).
+
+
+```{r}
+biopics <- biopics %>% 
+  mutate(Color = ifelse(person_of_color=="FALSE","Nonwhite","White"))
+biopics_by_race <- biopics %>%
+  mutate(Race = factor(ifelse(race_known=="Unknown",race_known,Color)))
+ggplot(biopics_by_race,aes(x=year_release,fill=Race))+
+  geom_bar()+
+  ylab("Total number of biopics")  
+```
+
+
+#(d) Based on a mosaic plot (collapsing over year of release), which sex / white-nonwhite-NA group is the most underrepresented in biopics based on number of subjets?
+
+```{r}
+library(ggmosaic)
+ggplot(biopics_by_race) + 
+  geom_mosaic(aes(x=product(subject_sex,Race),fill=subject_sex))
+```
+
+#According to the mosaic graph, 'Female' group is most underrepresented among the sex groups, and 'White' group is most underrepresented among white-nonwhite-NA group. Then 'Female and White' group has the least area on the plot, so it's the most underrepresented.
+
+
+
+#(e) Produce a summary table containing counts and proportions of biopic subjects per year for each sex/white-nonwehite-NA factor combination.
+
+```{r}
+biopics_by_race %>%
+  group_by (subject_sex,Race) %>%
+  summarise(count=n()) %>%
+  mutate(prop = count/sum(count))
+```
+
+
+
+#(f) Create (i) a line plot showing the counts of these groups over time and (ii) a line plot showing the relative proportions of subjects over time. Would you infer from these plots that the imbalance is improving over time or not? Explain your answer.
+
+```{r}
+biopics_by_race_sex <- biopics_by_race %>% 
+  mutate(comb=factor(interaction(subject_sex,Race)))
+
+lineplot <- biopics_by_race_sex %>% 
+  group_by(year_release,comb) %>%
+  summarise(count=n()) %>%
+  mutate(prop=count/sum(count))
+
+lineplot %>% ggplot(aes(x=year_release, y=count))+
+  geom_line()+facet_wrap(~comb)
+```
+
+
+```{r}
+lineplot %>% ggplot(aes(x=year_release, y=prop))+
+  geom_line()+facet_wrap(~comb)
+```
+#From count graphs, the plot of Male.Nonwhite shows a quick increasing trend and the other two Male groups also show a increasing trend with a relatively slower speed so the difference of counts between White and Nonwhite/Unknown groups gets larger over time. However, the Female groups don't show a clear increasing trend and the difference of counts between Female and Male groups seems to get larger and larger over time.
+
+#However, from the proportion graphs, we can see a trend that the groups with high proportion at the beginning have a decreasing trend of proportion over time, so the difference between the proportion of each group is decreasing.
+
+#In conclusion, when it comes to imbalance, we are mostly talking about the relative proportion of different groups, so I think the imbalance is decreasing over time.
+
+
+
+
+
+Q2
+
+(a) First, create a summary table that finds the mean and median for each of the six quantitive variables with a column for each group. (Hint: use summarise, pivot_longer, and pivot_wider). Which varible(s) seem to differentiate amongst the different types of diabetes?
+
+```{r include=FALSE}
+library(heplots)
+```
+
+```{r}
+data(Diabetes)
+
+Diabetes %>% group_by(group) %>% 
+  summarise_all(list(Avg=mean,Med=median)) %>%
+  pivot_longer(cols=c("relwt_Avg", "glufast_Avg", "glutest_Avg" ,"instest_Avg","sspg_Avg","relwt_Med","glufast_Med","glutest_Med","instest_Med","sspg_Med"),names_to = "Measure") %>%
+  pivot_wider(id_cols = "Measure", names_from = group)
+```
+
+Glutest seems to differentiate most obviously amongst the different types of diabetes.
+While glufast, instest and sspg seem to differentiate not so obviously amongst the different types of diabetes.
+
+
+(b) Create 3 scatterplots, comparing all possible pairs of the glucose test variable, the insulin test varible and the sspg variable. Which pair of variables seems to allow for the strongest distinction amongst the three groups?
+
+```{r}
+ggplot(Diabetes,aes(x=glutest,y=instest,col=group))+geom_point()
+ggplot(Diabetes,aes(x=sspg,y=instest,col=group))+geom_point()
+ggplot(Diabetes,aes(x=sspg,y=glutest,col=group))+geom_point()
+```
+The glutest and instest seems to allow for the strongest distinction amongst the three groups. 
+
+
+
+(c) Using the pair of variables that you chose in part (b), make 2-d histograms and contour plots for each group separately. Do you find for this dataset that these plot provide useful summaries of the differences in distributions in the three groups? Feel free to adjust the amount of binning/smoothing and the number of levels from the defalut levels.
+
+```{r}
+  Diabetes %>% ggplot(aes(x=instest,y=glutest)) +geom_bin2d(bins = 50)+
+  scale_fill_continuous(type = "viridis")+facet_wrap(~group)
+
+  Diabetes %>% ggplot(aes(x=instest,y=glutest)) +geom_density_2d()+facet_wrap(~group)
+
+```
+
+
+
+
+Yes, I find for this dataset these plots provide useful summaries. 
+In the normal group, the points are mostly in the left lower corner of the graph which means the instest are mostly less than 300 in this group and the glutest are mostly less than 400 and the number of points gets to the peak when the intest is around 160 and the glutest is around 370.
+
+In the Chemical_Diabetic group, most points have less than 400 instest and less than 600 glutest, and the number of points gets to the peak when the intest is around 200 and the glutest is around 450 which is the larger than Normal group both in intest and glutest.
+
+In the Overt_Diabetic group, the points fall in a interval with a relative smaller instest and larger glutest, and the number of points gets to the peak when the intest is around 100 and the glutest is around 1000 which has the largest glutest and the smallest instest in the three groups.
+
+
