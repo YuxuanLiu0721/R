@@ -1,0 +1,40 @@
+---
+title: "A4"
+output: html_document
+---
+
+(a)
+```{r}
+ceramic_data<-dget("ceramic.txt")
+class(ceramic_data)
+```
+
+(b)
+```{r}
+median_by_batch <- apply(ceramic_data,c("Batch"),median)
+median_by_batch[1]-median_by_batch[2]
+```
+
+(c)
+```{r include=FALSE}
+library(stats)
+```
+```{r}
+sd(ceramic_data)
+```
+
+(d)
+```{r}
+apply(ceramic_data,c("Table_Speed","Direction"),mean)
+```
+
+(e)
+```{r include=FALSE}
+library(dplyr)
+```
+```{r}
+apply(ceramic_data,c("Table_Speed","Direction"),mean) %>%
+  apply(.,c("Table_Speed"),diff)
+```
+
+
