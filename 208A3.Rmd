@@ -1,0 +1,84 @@
+---
+title: "A3"
+output: html_document
+---
+
+a.
+```{r}
+computeP <- function(x1,x2,theta) {
+  innerfunction <- function(sx1,sx2){
+    1/(1+exp(-sx1*theta[1]-sx2*theta[2]-theta[3]))
+  }
+  mapply(innerfunction,x1,x2)
+}
+```
+
+b.
+```{r}
+computeL <- function(theta,x1,x2,y) {
+  -sum(y*log(computeP(x1,x2,theta))+(1-y)*log(1-computeP(x1,x2,theta)))
+  }
+```
+
+c.
+```{r message=FALSE}
+library(readr)
+library(here)
+library(dplyr)
+HTRU2 <-
+  read_csv(here("HTRU_2.csv"),
+           col_names=FALSE)
+names(HTRU2) = c("Mean_IP", "SD_IP", "EK_IP", "SKW_IP",
+                 "Mean_DMSNR", "SD_DMSNR", "EK_DMSNR", "SKW_DMSNR",
+                 "Class")
+```
+
+```{r}
+optim(par=c(0,0,0), fn=computeL, 
+      x1=as.vector(select(HTRU2,Mean_IP)),
+      x2=as.vector(select(HTRU2,Mean_DMSNR)),
+      y=as.vector(select(HTRU2,Class)))[c("par","value")]
+```
+
+d.
+```{r message=FALSE}
+library(tidyverse)
+library(knitr)
+```
+
+```{r}
+var_combs<-combn(names(HTRU2[,-9]),2)
+result <- tibble(modelling = character(),loss=numeric())
+
+for(i in 1:28){
+  result <- add_row(result, modelling = str_c(var_combs[1,i],var_combs[2,i],sep="&"),
+                  loss = optim(par=c(0,0,0), fn=computeL, 
+                          x1=as.vector(select(HTRU2,var_combs[1,i])),
+                          x2=as.vector(select(HTRU2,var_combs[2,i])),
+                          y=HTRU2$Class)[["value"]])
+}
+result %>% arrange(loss) %>% kable(.)
+
+```
+
+e.
+```{r warning=FALSE}
+var_combs <- as_data_frame(var_combs) 
+```
+
+```{r}
+colnames(var_combs)[1:28] = str_c(var_combs[1,1:28],var_combs[2,1:28],sep="&")
+
+map_dfr(var_combs,function(x){optim(par=c(0,0,0), 
+                                    fn=computeL,
+                                    x1=as.vector(select(HTRU2,x[1])),
+                                    x2=as.vector(select(HTRU2,x[2])),
+                                    y=HTRU2$Class)[["value"]] }) %>% 
+  pivot_longer(everything(),"modelling") %>% 
+  arrange(value) %>% kable(.)
+
+```
+
+
+
+
