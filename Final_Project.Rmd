@@ -1,0 +1,163 @@
+---
+title: "Final_Project"
+output: html_document
+---
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(readr)
+library(tidyr)
+
+WCR <- read.csv("Womens_Clothing_Reviews.csv") 
+WCR_no_na <- WCR %>% drop_na()
+```
+
+Task 1
+```{r include=FALSE}
+library(dplyr)
+library(tidyverse)
+library(knitr)
+```
+
+```{r}
+summarise_table <- function(x) {
+ WCR_no_na %>% summarise(Avg = mean(x),
+                         Med = median(x),
+                         '25%ile'=quantile(x,0.25),
+                         '75%ile'=quantile(x,0.75),
+                         Std = sd(x),
+                         IQR = IQR(x)) %>% kable(.)
+}
+summarise_table(WCR$Age)
+ggplot(WCR_no_na, aes(y=Age))+ geom_boxplot()
+ggplot(WCR_no_na, aes(x=Age))+ geom_histogram(bins=50,col="black",fill="lightblue") 
+ggplot(WCR_no_na, aes(x=Age))+ geom_density(fill="lightblue")
+```
+
+From the summary table and boxplot, the average of reviewers' age is around 43 while 50% of reviewers are between 34 and 52.
+And from the histogram and density plot, the age which most reviewers are at is around 41 and most reviewers are under 75.
+
+```{r}
+summarise_table(WCR$Rating)
+WCR_no_na %>% group_by(Rating) %>% 
+          summarise(count=n()) %>% 
+          mutate(prop = count/sum(count)) %>% 
+          arrange(desc(prop))
+ggplot(WCR_no_na,aes(x=Rating))+ geom_histogram(bins=5,col="black",fill="lightblue")
+```
+From the summary tables,the average of rating is around 4.2. Around 60% reviewers gave a 5 to products and 90% gave a rating above or equal to 3. 
+From the distribution plot, the proportion of people who gave that specific rating goes higher as the rating goes higher.
+```{r}
+WCR_no_na %>% group_by(Recommended) %>% 
+          summarise(count=n()) %>% 
+          mutate(prop = count/sum(count)) %>% 
+          arrange(desc(prop))
+ggplot(WCR_no_na,aes(x=Recommended))+ geom_histogram(bins=2,col="black",fill="lightblue")
+```
+From the table and plot we know the avarage of recommendation is around 0.82 which means around 82% of reviewers recommended the products they bought.
+```{r}
+sum_department <- WCR_no_na %>% group_by(Department_Name) %>% 
+          summarise(count=n()) %>% 
+          mutate(prop = count/sum(count)) %>%
+          mutate(Department_Name = fct_reorder(Department_Name,prop,.desc=TRUE)) %>%
+          arrange(desc(prop))
+sum_department          
+ggplot(sum_department,aes(x=Department_Name,fill=Department_Name))+
+  geom_bar(stat = "identity",aes(y=prop))+
+  scale_fill_viridis_d()
+```
+According to the proportion table and bar plot, the most popular department is Tops and around 45% consumers bought Tops. Around 87% consumers bought items from Tops, Dresses and Bottoms. The least popular departments are the unnamed and Trend department which just attracted around 0.5% consumers in total.
+
+Task 2 (1)
+```{r}
+WCR_no_na %>% group_by(Department_Name) %>%
+  summarise(Avg = mean(Age),
+            Med = median(Age),
+            '25%ile'=quantile(Age,0.25),
+            '75%ile'=quantile(Age,0.75),
+            Std = sd(Age),
+            IQR = IQR(Age)) %>% kable(.) 
+```
+
+```{r}
+ggplot(WCR_no_na,aes(x=Department_Name,y=Age,fill=Department_Name))+
+  geom_boxplot()
+```
+
+```{r}
+ggplot(WCR_no_na,aes(x=Age,fill=Department_Name))+
+  geom_density()+
+  facet_grid(rows=vars(Department_Name))
+```
+From the density plot above, the overall age distribution are almost the same among each department.
+And from the boxplot plot and the summary table above,although we can see that the average of age among each department are all around 41, Jakets, Tops and Trend departments have a slightly larger average age 44 while the unnamed and Instimate have a slightly smaller average age around 40. From the 75%ile value, we can also get that Jakets, Tops and Trend departments attracted more relatively older reviwers. 
+
+
+Task 2 (2)
+```{r}
+WCR_no_na <- WCR_no_na %>%  mutate (Age_group = findInterval(Age,c(26,36,46,65)))
+WCR_no_na <- WCR_no_na %>% mutate (Age_group_alt = recode(Age_group, '0'="Under 25",
+                                  '1'="26-35",
+                                              '2'="36-45",
+                                              '3'="46-64",
+                                              '4'="Over 65"))
+WCR_no_na %>% group_by(Age_group_alt) %>%
+  summarise(Avg = mean(Rating),
+            Med = median(Rating),
+            '25%ile'=quantile(Rating,0.25),
+            '75%ile'=quantile(Rating,0.75),
+            Std = sd(Rating),
+            IQR = IQR(Rating)) %>% arrange(desc(Avg)) %>% kable(.) 
+WCR_no_na %>% group_by(Age_group_alt,Rating) %>% count() %>% 
+  group_by(Age_group_alt) %>% mutate(prop=n/sum(n)) %>% 
+  pivot_wider(id_cols = Age_group_alt, names_from = Rating, values_from = prop) 
+WCR_no_na %>% group_by(Age_group_alt,Rating) %>% count() %>% 
+  group_by(Age_group_alt) %>% mutate(prop=n/sum(n)) %>%
+  ggplot(aes(x=Rating,fill=Rating))+geom_bar(stat = "identity", aes(y=prop))+facet_grid(~Age_group_alt)
+library(ggmosaic)
+ggplot(WCR_no_na) + geom_mosaic(aes(x=product(Rating,Age_group_alt),
+ fill=Age_group_alt))
+
+```
+
+As we can see from the summary table, the reviewers in Under 25 group have the largest average rating and smallest standard deviation. 
+However,if we check the bar plot, mosaic plot and summary table, the group over 65 has the largest proportion of rating 5 but also have the largest proportion of rating 1. As for group under 25, the proportion of rating 5 for this group is just around 0.012 less than group over 65 and the proportion of rating 1 is also around 0.012 less than group Over 65.
+In conclusion, the reviewers in group Under 25 are the most enthusiastic.
+
+
+Task 3 (a)
+
+```{r}
+WCR_no_na %>%  group_by(Clothing_ID,Department_Name) %>%
+  summarise(avg_rating = mean(Rating),number_of_reviews = n(),prop_Recommended=sum(Recommended)/n()) %>%
+  arrange(desc(avg_rating)) %>% head(10)
+```
+
+Task 3 (b)
+
+```{r}
+WCR_no_na %>%  group_by(Clothing_ID,Department_Name) %>%
+  summarise(avg_rating = mean(Rating),number_of_reviews = n(),prop_Recommended=sum(Recommended)/n()) %>%
+  arrange(desc(prop_Recommended)) %>% head(10)
+```
+
+Task 3 (c)
+
+```{r}
+WLCL <- function(ni,pi) {
+  ai <- 1.96^2/(2*ni)
+  bi <- pi*(1-pi)/ni
+  ci <- ai/(2*ni)
+  
+  final <- (pi+ai-(1.96*sqrt(bi+ci)))/(1+(2*ai))
+  return(final)
+}
+WCR_no_na %>%  group_by(Clothing_ID,Department_Name) %>%
+  summarise(avg_rating = mean(Rating),number_of_reviews = n(),prop_Recommended=sum(Recommended)/n()) %>%
+  mutate(WLCL = mapply(WLCL,number_of_reviews,prop_Recommended)) %>% 
+  arrange(desc(WLCL)) %>% head(10)
+```
+
+The WLCL list represents the popularity best.
+Because we can see clearly that all of the top 10 items in both highest average ratings and highest proportion of positive recommendations just have one review, which is not that reliable.
+While in the WLCL list, the number of reviews are enough as the value of both average rating and proportion of positive recommendations seem to be good enough.
+
